@@ -1,21 +1,22 @@
 package frc.robot.subsystems;
 
 import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.TalonFXControlMode;
 import com.ctre.phoenix.motorcontrol.TalonFXFeedbackDevice;
 import com.ctre.phoenix.motorcontrol.TalonFXInvertType;
-import com.ctre.phoenix.motorcontrol.can.TalonFX;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonFX;
 
-import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.SpeedController;
 import edu.wpi.first.wpilibj.SpeedControllerGroup;
 import edu.wpi.first.wpilibj.controller.PIDController;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Robot;
+import frc.robot.operator.controllers.BionicF310;
 
 public class Drivetrain extends SubsystemBase {
 
-    private final int TICKS_PER_ROTATION = 1440;
+    private final int TICKS_PER_ROTATION = 2048; //prev. 1440
     private final int TIMEOUT_MS = 30; // The amount of time the Roborio watis before it sends a failed signal back to
                                        // the Driver Station
     private final int PID_INDEX = 0; // The index for witch pid index to use (0 for primary, 1 for auxilliary)
@@ -26,7 +27,10 @@ public class Drivetrain extends SubsystemBase {
     private final double PEAK_OUTPUT_REVERSE = -PEAK_OUTPUT;
     private final double WHEEL_CIRCUMFERENCE_FEET = (6 * Math.PI) / 12;
     private final int SENSOR_POS = 0;
+    private final int MAX_CRUISE_VELOCITY = 15000;
+    private final int MAX_CRUISE_ACCEL = 6000; //TODO test values.
     private final double SENSOR_UNITS = 0;
+
     
 
     private final double K_P = 0.25; // A gain of 0.25 maximizes the motor output when the error is one revolution.
@@ -48,12 +52,20 @@ public class Drivetrain extends SubsystemBase {
         this.right_front = new WPI_TalonFX(idfr);
         this.right_back = new WPI_TalonFX(idbr);
         this.left_back = new WPI_TalonFX(idbl);
-        
-        this.left_side = new SpeedControllerGroup(left_front, left_back);
-        this.right_side = new SpeedControllerGroup(right_front, right_back);
-        this.diffDrive = new DifferentialDrive(left_side, right_side);
 
         
+        // Invert one side of the drivetrain to ensure that positive values indicate
+        // forward motion.
+        left_back.setInverted(TalonFXInvertType.CounterClockwise);
+        left_front.setInverted(TalonFXInvertType.CounterClockwise);
+        right_back.setInverted(TalonFXInvertType.Clockwise);
+        right_front.setInverted(TalonFXInvertType.Clockwise);
+        
+        //Make the left back & right back motors follow the left front & right front motors
+        left_back.follow(left_front);
+        right_back.follow(right_front);
+
+        this.diffDrive = new DifferentialDrive(left_front, right_front);
 
         // Configure Talon FXs
 
@@ -76,15 +88,6 @@ public class Drivetrain extends SubsystemBase {
         right_back.configNeutralDeadband(MOTOR_DEADBAND_PERCENTAGE);
         right_front.configNeutralDeadband(MOTOR_DEADBAND_PERCENTAGE);
 
-        // Invert one side of the drivetrain to ensure that positive values indicate
-        // forward motion.
-
-        // left_side.setInverted(true); right_side.setInverted(false);
-
-        left_back.setInverted(TalonFXInvertType.CounterClockwise);
-        left_front.setInverted(TalonFXInvertType.CounterClockwise);
-        right_back.setInverted(TalonFXInvertType.Clockwise);
-        right_front.setInverted(TalonFXInvertType.Clockwise);
 
         // Sets the minimum motor output.
         // Also sets the maximum motor output.
@@ -166,7 +169,7 @@ public class Drivetrain extends SubsystemBase {
     }
     
     //Make the robot drive a certain amout of feet forward along a given arc
-    public void driveDistance(double speed, double rotation_deg, double distance) { // Distance is in feet
+    public void driveDistanceArc(double speed, double rotation_deg, double distance) { // Distance is in feet
         
         // Create known arc.
         double totalRevolutions = distance / WHEEL_CIRCUMFERENCE_FEET;
@@ -174,22 +177,62 @@ public class Drivetrain extends SubsystemBase {
         
     }
     
-    public void driveDistance(double speed, double distance) {
+    public void driveDistance(double distance) {
 
         double totalRevolutions = distance / WHEEL_CIRCUMFERENCE_FEET; //This takes the amount of feet to move, and returns the amount of wheel rotations
         int ticksToMove = (int)(totalRevolutions * TICKS_PER_ROTATION); //This takes the amount of wheel rotations and returns the amount of ticks to move
-        int currentEncoderPos = left_front.getSelectedSensorPosition(); //This returns the amount of ticks the encoder is on
+        int lCurrentEncoderPos = left_front.getSelectedSensorPosition(); //This returns the amount of ticks the encoder is on
+        int rCurrentEncoderPos = right_front.getSelectedSensorPosition(); //This returns the amount of ticks the encoder is on
         
-        //Make the left back & right back motors follow the left front & right front motors
-        left_back.follow(left_front);
-        right_back.follow(right_front);
-        
-        //TODO see if we can implement motion magic control
-        //TODO resolve conflict between speed controller groups and following
-        
-        left_front.set(ControlMode.Position, currentEncoderPos + ticksToMove);
-        right_front.set(ControlMode.Position, currentEncoderPos + ticksToMove);
+        left_front.set(ControlMode.Position, lCurrentEncoderPos + ticksToMove);
+        right_front.set(ControlMode.Position, rCurrentEncoderPos + ticksToMove);
 
     }
+
+    public void driveDistanceMagic(double distance) {
+
+        double totalRevolutions = distance / WHEEL_CIRCUMFERENCE_FEET; //This takes the amount of feet to move, and returns the amount of wheel rotations
+        int ticksToMove = (int)(totalRevolutions * TICKS_PER_ROTATION); //This takes the amount of wheel rotations and returns the amount of ticks to move
+        int lCurrentEncoderPos = left_front.getSelectedSensorPosition(); //This returns the amount of ticks the encoder is on
+        int rCurrentEncoderPos = right_front.getSelectedSensorPosition(); //This returns the amount of ticks the encoder is on
+
+        //TODO see if we can implement motion magic control
+        
+        left_front.set(ControlMode.MotionMagic, lCurrentEncoderPos + ticksToMove);
+        right_front.set(ControlMode.MotionMagic, rCurrentEncoderPos + ticksToMove);
+    }
+
+    @Override
+    public void periodic() {
+
+        super.periodic();
+
+        // drive the distance configured in driveDistance
+        if(left_front.getControlMode() == TalonFXControlMode.Position.toControlMode()) {
+            //TODO Find out how close we need to be in terms of ticks
+            //Error is in ticks
+            if (Math.abs(left_front.getClosedLoopError()) < TICKS_PER_ROTATION * 1) {
+                // error is in acceptable range
+                //Stops the motor by setting the voltage to 0
+                left_front.set(ControlMode.PercentOutput, 0);
+                right_front.set(ControlMode.PercentOutput, 0);
+            } else {
+                // not there yet
+                //feed the motor safety watchdog
+                left_front.feed();
+                right_front.feed();
+            }
+            
+        } else {
+            //TODO ? Arcade drive periodic
+
+            //do what the joystick says
+            diffDrive.arcadeDrive(Robot.driverGamepad.getThresholdAxis(BionicF310.LY), Robot.driverGamepad.getThresholdAxis(BionicF310.LX));
+        
+        }
+    
+    }
+
+
 
 }

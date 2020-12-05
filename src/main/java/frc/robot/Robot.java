@@ -10,6 +10,8 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.operator.controllers.BionicF310;
+import frc.robot.operator.controllers.FlightStick;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -23,6 +25,11 @@ public class Robot extends TimedRobot {
   private static final String kCustomAuto = "My Auto";
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
+  
+  // Our stuff
+  public static BionicF310 driverGamepad = new BionicF310(0, 0.05, 0.6);
+  public static FlightStick flightStick = new FlightStick(1);
+
 
   //private Drivetrain drivetrain = new Drivetrain(20.0, 25.0);
 
