@@ -11,15 +11,8 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.operator.controllers.BionicF310;
-import frc.robot.operator.controllers.FlightStick;
+import frc.robot.subsystems.Drivetrain;
 
-/**
- * The VM is configured to automatically run this class, and to call the
- * functions corresponding to each mode, as described in the TimedRobot
- * documentation. If you change the name of this class or the package after
- * creating this project, you must also update the build.gradle file in the
- * project.
- */
 public class Robot extends TimedRobot {
   private static final String kDefaultAuto = "Default";
   private static final String kCustomAuto = "My Auto";
@@ -28,10 +21,7 @@ public class Robot extends TimedRobot {
   
   // Our stuff
   public static BionicF310 driverGamepad = new BionicF310(0, 0.05, 0.6);
-  public static FlightStick flightStick = new FlightStick(1);
-
-
-  //private Drivetrain drivetrain = new Drivetrain(20.0, 25.0);
+  private static Drivetrain drivetrain = new Drivetrain(5, 6);
 
   /**
    * This function is run when the robot is first started up and should be
@@ -54,6 +44,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
+
   }
 
   /**
@@ -95,7 +86,9 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void teleopPeriodic() {
-    
+
+    drivetrain.driveManual(driverGamepad.getThresholdAxis(BionicF310.LY), driverGamepad.getThresholdAxis(BionicF310.RX));
+  
   }
 
   /**
