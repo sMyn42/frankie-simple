@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.operator.controllers.BionicF310;
 import frc.robot.operator.controllers.FlightStick;
+import frc.robot.subsystems.Drivetrain;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -29,6 +30,8 @@ public class Robot extends TimedRobot {
   // Our stuff
   public static BionicF310 driverGamepad = new BionicF310(0, 0.05, 0.6);
   public static FlightStick flightStick = new FlightStick(1);
+
+  public static Drivetrain drivetrain = new Drivetrain(5, 6); //TODO add motor ids 
 
 
   //private Drivetrain drivetrain = new Drivetrain(20.0, 25.0);
@@ -54,6 +57,9 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
+
+  
+
   }
 
   /**
